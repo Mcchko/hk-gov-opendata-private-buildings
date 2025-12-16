@@ -677,52 +677,11 @@
                             </span>
                         </h2>
                         <div class="instructions" id="instructions">
-                            <p><strong>繪製範圍：</strong>點擊矩形工具（左下角），然後在地圖上點擊並拖動</p>
+                            <!-- <p><strong>繪製範圍：</strong>點擊矩形工具（左下角），然後在地圖上點擊並拖動</p> -->
                             <p><strong>查看大廈：</strong>繪製範圍後自動顯示範圍內的私人大廈</p>
-                            <p><strong>清除範圍：</strong>點擊「清除範圍」按鈕（左下角）以移除矩形</p>
-                            <p><strong>取消繪製：</strong>按下 ESC 鍵或點擊地圖其他位置</p>
+                            <!-- <p><strong>清除範圍：</strong>點擊「清除範圍」按鈕（左下角）以移除矩形</p> -->
+                            <!-- <p><strong>取消繪製：</strong>按下 ESC 鍵或點擊地圖其他位置</p> -->
                             <p><strong>點擊標記：</strong>點擊藍色圓點查看大廈詳細資訊</p>
-                        </div>
-                    </div>
-                    <div class="control-section">
-                        <h2 class="panel-title" id="scope-info-toggle">
-                            範圍資訊
-                            <span class="scope-info-collapse" id="collapse-icon-scope-info">
-                                <i class="fas fa-caret-down"></i>
-                            </span>
-                        </h2>
-                        <div id="scope-info" class="scope-info" style="display: none;">
-                            <div class="scope-info-title">已選擇範圍</div>
-                            <div id="scope-coordinates" class="scope-coordinates">
-                                北界: --°<br>
-                                南界: --°<br>
-                                東界: --°<br>
-                                西界: --
-                            </div>
-                            <div class="scope-area">
-                                <span>估算面積：</span>
-                                <span id="scope-area-value" class="scope-area-value">-- 平方公里</span>
-                            </div>
-                        </div>
-                        <div id="empty-state" class="empty-state">
-                            <p>在地圖上繪製矩形範圍，此處將顯示相關資訊。</p>
-                        </div>
-                    </div>
-                    <div class="control-section">
-                        <h2 class="panel-title" id="buildings-toggle">
-                            範圍內大廈 <span id="building-count" style="font-size: 0.8em; color: #10b981;">(0)</span>
-                            <span class="buildings-collapse" id="collapse-icon-buildings">
-                                <i class="fas fa-caret-down"></i>
-                            </span>
-                        </h2>
-                        <div id="buildings-info" class="buildings-info" style="display: none;">
-                            <div class="buildings-info-title">範圍內私人大廈</div>
-                            <div id="buildings-list" class="buildings-list">
-                                <!-- Buildings will be listed here -->
-                            </div>
-                        </div>
-                        <div id="buildings-empty" class="empty-state">
-                            <p>繪製範圍後，將顯示範圍內的私人大廈列表。</p>
                         </div>
                     </div>
                 </aside>
@@ -822,8 +781,8 @@
         // 自定義圖標
         const privateBuildingIcon = L.divIcon({
             className: 'private-building-marker',
-            iconSize: [12, 12],
-            iconAnchor: [6, 6]
+            iconSize: [16, 16],
+            iconAnchor: [8, 8]
         });
         
         // 載入私人大廈數據
@@ -1124,26 +1083,10 @@
         });
         
         // 範圍資訊摺疊功能
-        const scopeInfoToggle = document.getElementById('scope-info-toggle');
         const scopeInfo = document.getElementById('scope-info');
         const emptyState = document.getElementById('empty-state');
         const collapseIconScopeInfo = document.getElementById('collapse-icon-scope-info');
         let scopeInfoCollapsed = false;
-        
-        scopeInfoToggle.addEventListener('click', () => {
-            // 只有當有範圍資訊時才可摺疊
-            if (scopeInfo.style.display !== 'none') {
-                scopeInfoCollapsed = !scopeInfoCollapsed;
-                scopeInfo.classList.toggle('collapsed', scopeInfoCollapsed);
-                collapseIconScopeInfo.classList.toggle('collapsed', scopeInfoCollapsed);
-                collapseIconScopeInfo.innerHTML = scopeInfoCollapsed ?
-                    '<i class="fas fa-caret-right"></i>' :
-                    '<i class="fas fa-caret-down"></i>';
-            } else if (emptyState.style.display !== 'none') {
-                // 當處於空狀態時，點擊無效果或顯示提示
-                showNotification('請先在地圖上繪製範圍以查看資訊', 'info');
-            }
-        });
         
         // 大廈資訊摺疊功能
         const buildingsToggle = document.getElementById('buildings-toggle');
@@ -1151,21 +1094,6 @@
         const buildingsEmpty = document.getElementById('buildings-empty');
         const collapseIconBuildings = document.getElementById('collapse-icon-buildings');
         let buildingsCollapsed = false;
-        
-        buildingsToggle.addEventListener('click', () => {
-            // 只有當有大廈資訊時才可摺疊
-            if (buildingsInfo.style.display !== 'none') {
-                buildingsCollapsed = !buildingsCollapsed;
-                buildingsInfo.classList.toggle('collapsed', buildingsCollapsed);
-                collapseIconBuildings.classList.toggle('collapsed', buildingsCollapsed);
-                collapseIconBuildings.innerHTML = buildingsCollapsed ?
-                    '<i class="fas fa-caret-right"></i>' :
-                    '<i class="fas fa-caret-down"></i>';
-            } else if (buildingsEmpty.style.display !== 'none') {
-                // 當處於空狀態時，點擊無效果或顯示提示
-                showNotification('請先在地圖上繪製範圍以查看大廈列表', 'info');
-            }
-        });
         
         // 流動裝置控制面板功能
         const mobileToggle = document.getElementById('mobile-toggle');
@@ -1278,9 +1206,9 @@
                 // 流動裝置優化
                 const instructionsP = document.querySelectorAll('.instructions p');
                 if (instructionsP.length >= 3) {
-                    instructionsP[0].innerHTML = '<strong>繪製範圍：</strong>點擊矩形工具（左下角），然後在地圖上拖動';
+                    // instructionsP[0].innerHTML = '<strong>繪製範圍：</strong>點擊矩形工具（左下角），然後在地圖上拖動';
                     instructionsP[1].innerHTML = '<strong>查看大廈：</strong>繪製範圍後自動顯示私人大廈';
-                    instructionsP[2].innerHTML = '<strong>清除範圍：</strong>點擊「清除範圍」按鈕（左下角）';
+                    // instructionsP[2].innerHTML = '<strong>清除範圍：</strong>點擊「清除範圍」按鈕（左下角）';
                 }
                 
                 // 確保面板在流動裝置上初始狀態正確
@@ -1291,9 +1219,9 @@
                 // 桌面指引
                 const instructionsP = document.querySelectorAll('.instructions p');
                 if (instructionsP.length >= 3) {
-                    instructionsP[0].innerHTML = '<strong>繪製範圍：</strong>點擊矩形工具（左下角），然後點擊並拖動';
+                    // instructionsP[0].innerHTML = '<strong>繪製範圍：</strong>點擊矩形工具（左下角），然後點擊並拖動';
                     instructionsP[1].innerHTML = '<strong>查看大廈：</strong>繪製範圍後自動顯示範圍內的私人大廈';
-                    instructionsP[2].innerHTML = '<strong>清除範圍：</strong>點擊「清除範圍」按鈕（左下角）';
+                    // instructionsP[2].innerHTML = '<strong>清除範圍：</strong>點擊「清除範圍」按鈕（左下角）';
                 }
                 
                 // 確保面板在桌面上始終顯示
