@@ -1,0 +1,1329 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>香港私人大廈業主委員會</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <!-- Leaflet.draw CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+    <!-- Awesome Icon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" />
+    <style>
+        .element-hidden {
+            display: none!important;
+        }
+        /* Reset & Base */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            padding: 16px;
+            color: #1f2937;
+        }
+        /* Layout */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            min-height: 100vh;
+        }
+        /* Header */
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 12px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(12px);
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .header h1 {
+            color: #111827;
+            font-size: 1.875rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .header .subtitle {
+            color: #6b7280;
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+        /* Stats Panel */
+        .stats-panel {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 12px;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            margin-bottom: 10px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        .stat-item {
+            text-align: center;
+            padding: 10px;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            border-radius: 8px;
+            border-left: 4px solid #1e3c72;
+        }
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1e3c72;
+        }
+        .stat-label {
+            font-size: 0.9rem;
+            color: #64748b;
+            margin-top: 5px;
+        }
+        /* Main Content - Single Column for Map */
+        .main-content {
+            flex: 1;
+        }
+        /* Map Section */
+        .map-container {
+            height: 73vh !important;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            position: relative;
+        }
+        #map {
+            height: 100%;
+            width: 100%;
+            border-radius: 16px;
+        }
+        /* Map Control Panel (top-left) */
+        .map-control-panel {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            max-width: 350px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .panel-title {
+            color: #111827;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+        /* 統一摺疊圖標樣式 */
+        .panel-title .instructions-collapse,
+        .panel-title .scope-info-collapse,
+        .panel-title .buildings-collapse {
+            color: #1e3c72;
+            font-size: 0.9rem;
+            transition: transform 0.3s ease;
+        }
+        .panel-title .instructions-collapse.collapsed,
+        .panel-title .scope-info-collapse.collapsed,
+        .panel-title .buildings-collapse.collapsed {
+            transform: rotate(-90deg);
+        }
+        /* Instructions */
+        .instructions {
+            background: linear-gradient(135deg, #f3f4f6 0%, #f9fafb 100%);
+            padding: 16px;
+            border-radius: 10px;
+            border-left: 4px solid #1e3c72;
+            margin-bottom: 20px;
+            max-height: 300px;
+            overflow: hidden;
+            transition: max-height 0.3s ease, opacity 0.3s ease, margin-bottom 0.3s ease;
+        }
+        .instructions.collapsed {
+            max-height: 0;
+            opacity: 0;
+            margin-bottom: 0;
+            padding: 0;
+            border: none;
+        }
+        .instructions p {
+            margin-bottom: 10px;
+            color: #374151;
+            line-height: 1.5;
+            font-size: 0.9rem;
+            position: relative;
+            padding-left: 18px;
+        }
+        .instructions p:last-child {
+            margin-bottom: 0;
+        }
+        .instructions p::before {
+            content: "•";
+            color: #1e3c72;
+            font-weight: bold;
+            position: absolute;
+            left: 0;
+        }
+        /* Scope Info */
+        .scope-info {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 16px;
+            border-radius: 10px;
+            box-shadow: 0 8px 20px rgba(30, 60, 114, 0.3);
+            animation: fadeIn 0.3s ease-out;
+            max-height: 500px;
+            overflow: hidden;
+            transition: max-height 0.3s ease, opacity 0.3s ease, margin-bottom 0.3s ease;
+        }
+        .scope-info.collapsed {
+            max-height: 0;
+            opacity: 0;
+            margin-bottom: 0;
+            padding: 0;
+            border: none;
+            overflow: hidden;
+        }
+        /* Buildings Info */
+        .buildings-info {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 16px;
+            border-radius: 10px;
+            box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
+            animation: fadeIn 0.3s ease-out;
+            max-height: 400px;
+            overflow: hidden;
+            transition: max-height 0.3s ease, opacity 0.3s ease, margin-bottom 0.3s ease;
+        }
+        .buildings-info.collapsed {
+            max-height: 0;
+            opacity: 0;
+            margin-bottom: 0;
+            padding: 0;
+            border: none;
+            overflow: hidden;
+        }
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .scope-info-title,
+        .buildings-info-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .scope-info-title::before {
+            content: "📍";
+            font-size: 1.1rem;
+        }
+        .buildings-info-title::before {
+            content: "🏢";
+            font-size: 1.1rem;
+        }
+        .scope-coordinates {
+            font-family: 'SF Mono', 'Monaco', 'Menlo', 'Consolas', monospace;
+            font-size: 0.8rem;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            line-height: 1.5;
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .buildings-list {
+            max-height: 300px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+        .building-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            border-left: 3px solid #fbbf24;
+            font-size: 0.85rem;
+            line-height: 1.4;
+        }
+        .building-item:last-child {
+            margin-bottom: 0;
+        }
+        .building-name {
+            font-weight: 600;
+            color: #fef3c7;
+            margin-bottom: 4px;
+        }
+        .building-address {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 0.8rem;
+        }
+        .building-count {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            margin-top: 4px;
+        }
+        .scope-area {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .scope-area-value {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #fbbf24;
+        }
+        /* Loading Indicator */
+        .loading-indicator {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px 30px;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            z-index: 2000;
+            text-align: center;
+        }
+        .loading-indicator.active {
+            display: block;
+        }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #1e3c72;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 30px 16px;
+            color: #9ca3af;
+            background: rgba(249, 250, 251, 0.8);
+            border-radius: 10px;
+            border: 2px dashed #d1d5db;
+        }
+        .empty-state::before {
+            content: "⬇️";
+            font-size: 1.5rem;
+            display: block;
+            margin-bottom: 12px;
+        }
+        .empty-state p {
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        /* Custom Clear All Button */
+        .clear-all-btn {
+            position: absolute;
+            bottom: 60px;
+            left: 10px;
+            z-index: 1000;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 16px;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+            opacity: 0;
+            pointer-events: none;
+        }
+        .clear-all-btn.visible {
+            opacity: 1;
+            pointer-events: all;
+        }
+        .clear-all-btn:hover {
+            background: #dc2626;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
+        }
+        .clear-all-btn:active {
+            transform: translateY(0);
+        }
+        /* Mobile Toggle Button */
+        .mobile-toggle {
+            display: none;
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 1001;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 8px;
+            padding: 10px 14px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #1e3c72;
+        }
+        /* Panel Close Button - Inside panel */
+        .panel-close-btn {
+            display: none;
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 16px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            align-items: center;
+            gap: 6px;
+            z-index: 1002;
+        }
+        /* Panel Overlay */
+        .panel-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1998;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .panel-overlay.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+        /* Footer */
+        .footer {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 0.875rem;
+            padding: 20px;
+            margin-top: auto;
+        }
+        /* Mobile Optimizations */
+        @media (max-width: 768px) {
+            body {
+                padding: 12px;
+                background: #1e3c72;
+            }
+            .container {
+                gap: 16px;
+            }
+            .header {
+                padding: 16px;
+                border-radius: 12px;
+            }
+            .header h1 {
+                font-size: 1.5rem;
+            }
+            .stats-panel {
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+                padding: 10px;
+            }
+            .stat-item {
+                padding: 8px;
+            }
+            .stat-value {
+                font-size: 1.2rem;
+            }
+            .stat-label {
+                font-size: 0.8rem;
+            }
+            .map-container {
+                height: 400px;
+                border-radius: 12px;
+            }
+            
+            /* 重新設計控制面板為全屏側滑面板 */
+            .map-control-panel {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                max-width: 100%;
+                max-height: 100%;
+                border-radius: 0;
+                z-index: 2000;
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+                overflow-y: auto;
+                padding: 60px 20px 20px 20px;
+                width: 85%;
+                max-width: 400px;
+                background: rgba(255, 255, 255, 0.98);
+                backdrop-filter: blur(20px);
+                box-shadow: 5px 0 25px rgba(0, 0, 0, 0.2);
+            }
+            
+            .map-control-panel.mobile-visible {
+                transform: translateX(0);
+            }
+            
+            /* 修改 mobile-toggle 為固定位置 */
+            .mobile-toggle {
+                display: block;
+                z-index: 2001; /* 高於控制面板 */
+                background: rgba(255, 255, 255, 0.95);
+                border-radius: 8px;
+                padding: 12px 16px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                cursor: pointer;
+                font-size: 1rem;
+                font-weight: 600;
+                color: #1e3c72;
+            }
+            
+            /* 顯示面板內的關閉按鈕 */
+            .panel-close-btn {
+                display: flex;
+            }
+            
+            .instructions p {
+                font-size: 0.85rem;
+                padding-left: 16px;
+            }
+            .scope-coordinates {
+                font-size: 0.75rem;
+                padding: 10px;
+            }
+            .scope-area-value {
+                font-size: 1rem;
+            }
+            .clear-all-btn {
+                bottom: 50px;
+                left: 10px;
+                padding: 12px 20px;
+                font-size: 1rem;
+            }
+            /* Adjust Leaflet controls */
+            .leaflet-top.leaflet-left {
+                top: 50px !important;
+            }
+            .leaflet-bottom.leaflet-left {
+                bottom: 40px !important;
+            }
+        }
+        /* Desktop Enhancements */
+        @media (min-width: 769px) {
+            /* 在桌面設備隱藏 overlay 和關閉按鈕 */
+            .panel-overlay {
+                display: none !important;
+            }
+            .panel-close-btn {
+                display: none !important;
+            }
+            .mobile-toggle {
+                display: none !important;
+            }
+        }
+        @media (min-width: 1200px) {
+            .map-container {
+                height: 600px;
+            }
+        }
+        /* Leaflet Customizations */
+        .leaflet-control-layers {
+            border-radius: 8px !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+        }
+        .leaflet-draw-toolbar {
+            border-radius: 8px !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+        }
+        .leaflet-draw-toolbar a {
+            border-radius: 6px !important;
+        }
+        /* Hide edit toolbar (Save, Cancel, Delete options) */
+        .leaflet-draw-toolbar.leaflet-bar.leaflet-draw-toolbar-top.leaflet-draw-toolbar-notop.leaflet-draw-toolbar-nobottom {
+            display: none !important;
+        }
+        /* Hide zoom control from topleft */
+        .leaflet-control-zoom {
+            display: none !important;
+        }
+        /* Position draw control at bottomleft */
+        .leaflet-draw.leaflet-control {
+            bottom: 10px !important;
+            left: 10px !important;
+            top: auto !important;
+            right: auto !important;
+        }
+        .leaflet-draw-toolbar {
+            margin-bottom: 0 !important;
+        }
+        /* Custom Marker Styles */
+        .private-building-marker {
+            background: #1e3c72;
+            border: 2px solid white;
+            border-radius: 50%;
+            width: 12px;
+            height: 12px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+        }
+        .private-building-marker:hover {
+            background: #2a5298;
+            width: 16px;
+            height: 16px;
+        }
+        /* Smooth Transitions */
+        * {
+            transition: all 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>香港私人大廈業主委員會</h1>
+            <p class="subtitle">瀏覽和查詢香港私人大廈資訊</p>
+        </header>
+        
+        <!-- Stats Panel -->
+        <div class="stats-panel">
+            <div class="stat-item">
+                <div class="stat-value" id="total-buildings">載入中...</div>
+                <div class="stat-label">私人大廈總數</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="visible-buildings">0</div>
+                <div class="stat-label">範圍內大廈</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="selected-area">--</div>
+                <div class="stat-label">選擇區域</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="data-source">CSDI</div>
+                <div class="stat-label">數據來源</div>
+            </div>
+        </div>
+        
+        <main class="main-content">
+            <section class="map-container">
+                <div class="mobile-toggle" id="mobile-toggle">
+                    <i class="fas fa-bars"></i> 控制面板
+                </div>
+                <div id="map"></div>
+                <!-- Clear All Button -->
+                <button id="clear-all-btn" class="clear-all-btn">
+                    <i class="fas fa-trash-alt"></i> 清除範圍
+                </button>
+                <aside class="map-control-panel" id="control-panel">
+                    <!-- Panel Close Button for Mobile -->
+                    <button class="panel-close-btn" id="panel-close-btn">
+                        <i class="fas fa-times"></i> 關閉
+                    </button>
+                    <div class="control-section">
+                        <h2 class="panel-title" id="instructions-toggle">
+                            使用指引
+                            <span class="instructions-collapse" id="collapse-icon-instructions">
+                                <i class="fas fa-caret-down"></i>
+                            </span>
+                        </h2>
+                        <div class="instructions" id="instructions">
+                            <p><strong>繪製範圍：</strong>點擊矩形工具（左下角），然後在地圖上點擊並拖動</p>
+                            <p><strong>查看大廈：</strong>繪製範圍後自動顯示範圍內的私人大廈</p>
+                            <p><strong>清除範圍：</strong>點擊「清除範圍」按鈕（左下角）以移除矩形</p>
+                            <p><strong>取消繪製：</strong>按下 ESC 鍵或點擊地圖其他位置</p>
+                            <p><strong>點擊標記：</strong>點擊藍色圓點查看大廈詳細資訊</p>
+                        </div>
+                    </div>
+                    <div class="control-section">
+                        <h2 class="panel-title" id="scope-info-toggle">
+                            範圍資訊
+                            <span class="scope-info-collapse" id="collapse-icon-scope-info">
+                                <i class="fas fa-caret-down"></i>
+                            </span>
+                        </h2>
+                        <div id="scope-info" class="scope-info" style="display: none;">
+                            <div class="scope-info-title">已選擇範圍</div>
+                            <div id="scope-coordinates" class="scope-coordinates">
+                                北界: --°<br>
+                                南界: --°<br>
+                                東界: --°<br>
+                                西界: --
+                            </div>
+                            <div class="scope-area">
+                                <span>估算面積：</span>
+                                <span id="scope-area-value" class="scope-area-value">-- 平方公里</span>
+                            </div>
+                        </div>
+                        <div id="empty-state" class="empty-state">
+                            <p>在地圖上繪製矩形範圍，此處將顯示相關資訊。</p>
+                        </div>
+                    </div>
+                    <div class="control-section">
+                        <h2 class="panel-title" id="buildings-toggle">
+                            範圍內大廈 <span id="building-count" style="font-size: 0.8em; color: #10b981;">(0)</span>
+                            <span class="buildings-collapse" id="collapse-icon-buildings">
+                                <i class="fas fa-caret-down"></i>
+                            </span>
+                        </h2>
+                        <div id="buildings-info" class="buildings-info" style="display: none;">
+                            <div class="buildings-info-title">範圍內私人大廈</div>
+                            <div id="buildings-list" class="buildings-list">
+                                <!-- Buildings will be listed here -->
+                            </div>
+                        </div>
+                        <div id="buildings-empty" class="empty-state">
+                            <p>繪製範圍後，將顯示範圍內的私人大廈列表。</p>
+                        </div>
+                    </div>
+                </aside>
+                <!-- Panel Overlay for Mobile -->
+                <div class="panel-overlay" id="panel-overlay"></div>
+            </section>
+        </main>
+        <footer class="footer">
+            <p>香港私人大廈業主委員會 | 支援桌面及流動裝置 | 數據來源：香港地理數據站 (CSDI)</p>
+        </footer>
+    </div>
+    
+    <!-- Loading Indicator -->
+    <div class="loading-indicator" id="loading-indicator">
+        <div class="spinner"></div>
+        <p>載入私人大廈數據中...</p>
+    </div>
+    
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <!-- Leaflet.draw JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+    <script>
+        window.__gc__ = {
+            DEFAULT: {
+                COORDINATE: {
+                    lat: 22.3023,
+                    lng: 114.1745,
+                    zoom: 15
+                }
+            },
+            DATA_SOURCE: "https://portal.csdi.gov.hk/server/services/common/had_rcd_1665042670005_49262/MapServer/WFSServer?service=wfs&request=GetFeature&typenames=OCOMM_INDEX&outputFormat=geojson"
+        };
+        
+        // 初始化地圖，移除預設縮放控制
+        const map = L.map('map', {
+            zoomControl: false, // 移除預設縮放控制
+            attributionControl: true
+        }).setView(
+            [
+                window.__gc__.DEFAULT.COORDINATE.lat,
+                window.__gc__.DEFAULT.COORDINATE.lng
+            ],
+            window.__gc__.DEFAULT.COORDINATE.zoom
+        ); // 預設中心為香港
+        
+        // 添加自定義縮放控制至左下角
+        L.control.zoom({
+            position: 'bottomleft'
+        }).addTo(map);
+        
+        // 添加地圖圖層
+        const tileLayers = {
+            "開放街道地圖": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap',
+                maxZoom: 19,
+                subdomains: ['a', 'b', 'c']
+            }),
+            "衛星圖像": L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: '© Esri',
+                maxZoom: 19
+            }),
+            "地形圖": L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenTopoMap',
+                maxZoom: 17
+            })
+        };
+        
+        // 添加預設地圖圖層
+        tileLayers["開放街道地圖"].addTo(map);
+        
+        // 添加圖層控制至左上角
+        L.control.layers(tileLayers, null, {
+            collapsed: true,
+            position: 'topleft'
+        }).addTo(map);
+        
+        // 初始化私人大廈標記圖層
+        const buildingsLayer = new L.FeatureGroup();
+        map.addLayer(buildingsLayer);
+        
+        // 私人大廈數據
+        let privateBuildingsData = [];
+        let visibleBuildings = [];
+        
+        // 追蹤當前範圍
+        let currentScope = null;
+        
+        // 獲取 UI 元素
+        const clearAllBtn = document.getElementById('clear-all-btn');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const totalBuildingsElement = document.getElementById('total-buildings');
+        const visibleBuildingsElement = document.getElementById('visible-buildings');
+        const selectedAreaElement = document.getElementById('selected-area');
+        
+        // 自定義圖標
+        const privateBuildingIcon = L.divIcon({
+            className: 'private-building-marker',
+            iconSize: [12, 12],
+            iconAnchor: [6, 6]
+        });
+        
+        // 載入私人大廈數據
+        async function loadPrivateBuildingsData() {
+            try {
+                loadingIndicator.classList.add('active');
+                console.log('開始載入私人大廈數據...');
+                
+                const response = await fetch(window.__gc__.DATA_SOURCE);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP 錯誤! 狀態: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('數據載入成功，特徵數量:', data.features?.length || 0);
+                
+                if (data.features && data.features.length > 0) {
+                    privateBuildingsData = data.features.map(feature => {
+                        const properties = feature.properties || {};
+                        const geometry = feature.geometry || {};
+                        
+                        // 提取座標
+                        let lat, lng;
+                        if (geometry.type === 'Point' && geometry.coordinates) {
+                            [lng, lat] = geometry.coordinates;
+                        } else {
+                            // 如果沒有座標，使用香港的中心點
+                            lat = 22.3023;
+                            lng = 114.1745;
+                        }
+                        
+                        return {
+                            id: properties.GmlID || Date.now() + Math.random(),
+                            name: properties.NAME_OF_OCOMM_IN_CHN || '未命名大廈',
+                            address: properties.ADDR_OF_BUILDING_IN_CHN || '地址不詳',
+                            latitude: lat,
+                            longitude: lng,
+                            properties: properties
+                        };
+                    });
+                    
+                    console.log(`成功處理 ${privateBuildingsData.length} 個私人大廈數據點`);
+                    totalBuildingsElement.textContent = privateBuildingsData.length.toLocaleString();
+                    
+                    // 在地圖上顯示所有大廈
+                    displayAllBuildings();
+                    
+                    showNotification(`已載入 ${privateBuildingsData.length} 個私人大廈數據點`, 'success');
+                } else {
+                    console.warn('數據為空或格式不正確');
+                    showNotification('未找到私人大廈數據', 'warning');
+                    totalBuildingsElement.textContent = '0';
+                }
+                
+            } catch (error) {
+                console.error('載入私人大廈數據時出錯:', error);
+                showNotification(`載入數據時出錯: ${error.message}`, 'error');
+                totalBuildingsElement.textContent = '錯誤';
+                
+                // 添加一些示例數據以便測試
+                addSampleBuildings();
+            } finally {
+                loadingIndicator.classList.remove('active');
+            }
+        }
+        
+        // 添加示例數據（如果實際數據載入失敗）
+        function addSampleBuildings() {
+            console.log('添加示例數據...');
+            privateBuildingsData = [
+                {
+                    id: 1,
+                    name: '示例大廈一號',
+                    address: '香港中環德輔道中',
+                    latitude: 22.282,
+                    longitude: 114.158
+                },
+                {
+                    id: 2,
+                    name: '示例大廈二號',
+                    address: '香港銅鑼灣軒尼詩道',
+                    latitude: 22.280,
+                    longitude: 114.185
+                },
+                {
+                    id: 3,
+                    name: '示例大廈三號',
+                    address: '香港尖沙咀彌敦道',
+                    latitude: 22.297,
+                    longitude: 114.172
+                },
+                {
+                    id: 4,
+                    name: '示例大廈四號',
+                    address: '香港旺角亞皆老街',
+                    latitude: 22.320,
+                    longitude: 114.170
+                }
+            ];
+            
+            totalBuildingsElement.textContent = privateBuildingsData.length.toLocaleString();
+            displayAllBuildings();
+            showNotification(`載入示例數據 (${privateBuildingsData.length}個)`, 'info');
+        }
+        
+        // 在地圖上顯示所有大廈
+        function displayAllBuildings() {
+            // 清除現有標記
+            buildingsLayer.clearLayers();
+            
+            privateBuildingsData.forEach(building => {
+                const marker = L.marker([building.latitude, building.longitude], {
+                    icon: privateBuildingIcon,
+                    title: building.name
+                });
+                
+                // 添加彈出信息
+                const popupContent = `
+                    <div style="max-width: 250px;">
+                        <h4 style="margin: 0 0 10px 0; color: #1e3c72;">🏢 ${building.name}</h4>
+                        <p style="margin: 0 0 8px 0; font-size: 0.9em;"><strong>地址：</strong>${building.address}</p>
+                        <hr style="margin: 8px 0;">
+                        <p style="margin: 0; font-size: 0.8em; color: #666;">點擊地圖其他位置關閉此窗口</p>
+                    </div>
+                `;
+                
+                marker.bindPopup(popupContent);
+                buildingsLayer.addLayer(marker);
+            });
+            
+            console.log(`已在地圖上添加 ${privateBuildingsData.length} 個大廈標記`);
+        }
+        
+        // 過濾範圍內的私人大廈
+        function filterBuildingsInScope(bounds) {
+            if (!bounds || !privateBuildingsData.length) return [];
+            
+            const north = bounds.getNorth();
+            const south = bounds.getSouth();
+            const east = bounds.getEast();
+            const west = bounds.getWest();
+            
+            return privateBuildingsData.filter(building => {
+                return building.latitude <= north &&
+                       building.latitude >= south &&
+                       building.longitude <= east &&
+                       building.longitude >= west;
+            });
+        }
+        
+        // 更新大廈列表顯示
+        function updateBuildingsList(buildings) {
+            const buildingsList = document.getElementById('buildings-list');
+            const buildingsInfo = document.getElementById('buildings-info');
+            const buildingsEmpty = document.getElementById('buildings-empty');
+            const buildingCount = document.getElementById('building-count');
+            
+            buildingsList.innerHTML = '';
+            
+            if (buildings.length > 0) {
+                buildings.sort((a, b) => a.name.localeCompare(b.name));
+                
+                buildings.forEach(building => {
+                    const buildingElement = document.createElement('div');
+                    buildingElement.className = 'building-item';
+                    buildingElement.innerHTML = `
+                        <div class="building-name">${building.name}</div>
+                        <div class="building-address">${building.address}</div>
+                    `;
+                    buildingsList.appendChild(buildingElement);
+                });
+                
+                buildingsInfo.style.display = 'block';
+                buildingsInfo.classList.remove('collapsed');
+                document.getElementById('collapse-icon-buildings').classList.remove('collapsed');
+                document.getElementById('collapse-icon-buildings').innerHTML = '<i class="fas fa-caret-down"></i>';
+                buildingsEmpty.style.display = 'none';
+                buildingCount.textContent = `(${buildings.length})`;
+                visibleBuildingsElement.textContent = buildings.length.toLocaleString();
+            } else {
+                buildingsInfo.style.display = 'none';
+                buildingsEmpty.style.display = 'block';
+                buildingCount.textContent = '(0)';
+                visibleBuildingsElement.textContent = '0';
+            }
+        }
+        
+        // 清除所有範圍按鈕功能
+        clearAllBtn.addEventListener('click', function () {
+            // 清除所有繪製項目
+            currentScope = null;
+            visibleBuildings = [];
+            
+            // 更新 UI
+            const scopeInfo = document.getElementById('scope-info');
+            const emptyState = document.getElementById('empty-state');
+            scopeInfo.style.display = 'none';
+            scopeInfo.classList.remove('collapsed');
+            document.getElementById('collapse-icon-scope-info').classList.remove('collapsed');
+            document.getElementById('collapse-icon-scope-info').innerHTML = '<i class="fas fa-caret-down"></i>';
+            emptyState.style.display = 'block';
+            
+            // 清除大廈列表
+            updateBuildingsList([]);
+            
+            // 隱藏清除按鈕
+            clearAllBtn.classList.remove('visible');
+            
+            // 重置面積顯示
+            selectedAreaElement.textContent = '--';
+            
+            // 顯示反饋訊息
+            showNotification('範圍已成功清除！', 'success');
+        });
+        
+        // 顯示通知功能
+        function showNotification(message, type = 'info') {
+            // 移除現有通知
+            const existingNotification = document.querySelector('.notification');
+            if (existingNotification) {
+                existingNotification.remove();
+            }
+            
+            // 創建通知元素
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            
+            let icon = 'info-circle';
+            if (type === 'success') icon = 'check-circle';
+            if (type === 'error') icon = 'exclamation-circle';
+            if (type === 'warning') icon = 'exclamation-triangle';
+            
+            notification.innerHTML = `
+                <i class="fas fa-${icon}"></i>
+                <span>${message}</span>
+            `;
+            
+            // 設定通知樣式
+            Object.assign(notification.style, {
+                position: 'fixed',
+                bottom: '20px',
+                right: '20px',
+                backgroundColor: type === 'success' ? '#10b981' : 
+                               type === 'error' ? '#ef4444' : 
+                               type === 'warning' ? '#f59e0b' : '#3b82f6',
+                color: 'white',
+                padding: '12px 20px',
+                borderRadius: '8px',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                zIndex: '3000',
+                animation: 'slideIn 0.3s ease-out'
+            });
+            
+            // 添加到文檔
+            document.body.appendChild(notification);
+            
+            // 3秒後移除
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease-out';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+            
+            // 添加 CSS 動畫
+            if (!document.querySelector('#notification-styles')) {
+                const style = document.createElement('style');
+                style.id = 'notification-styles';
+                style.textContent = `
+                    @keyframes slideIn {
+                        from { transform: translateX(100%); opacity: 0; }
+                        to { transform: translateX(0); opacity: 1; }
+                    }
+                    @keyframes slideOut {
+                        from { transform: translateX(0); opacity: 1; }
+                        to { transform: translateX(100%); opacity: 0; }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+        }
+        
+        // 可摺疊指引功能
+        const instructionsToggle = document.getElementById('instructions-toggle');
+        const instructions = document.getElementById('instructions');
+        const collapseIconInstructions = document.getElementById('collapse-icon-instructions');
+        let instructionsCollapsed = false;
+        
+        instructionsToggle.addEventListener('click', () => {
+            instructionsCollapsed = !instructionsCollapsed;
+            instructions.classList.toggle('collapsed', instructionsCollapsed);
+            collapseIconInstructions.classList.toggle('collapsed', instructionsCollapsed);
+            collapseIconInstructions.innerHTML = instructionsCollapsed ?
+                '<i class="fas fa-caret-right"></i>' :
+                '<i class="fas fa-caret-down"></i>';
+        });
+        
+        // 範圍資訊摺疊功能
+        const scopeInfoToggle = document.getElementById('scope-info-toggle');
+        const scopeInfo = document.getElementById('scope-info');
+        const emptyState = document.getElementById('empty-state');
+        const collapseIconScopeInfo = document.getElementById('collapse-icon-scope-info');
+        let scopeInfoCollapsed = false;
+        
+        scopeInfoToggle.addEventListener('click', () => {
+            // 只有當有範圍資訊時才可摺疊
+            if (scopeInfo.style.display !== 'none') {
+                scopeInfoCollapsed = !scopeInfoCollapsed;
+                scopeInfo.classList.toggle('collapsed', scopeInfoCollapsed);
+                collapseIconScopeInfo.classList.toggle('collapsed', scopeInfoCollapsed);
+                collapseIconScopeInfo.innerHTML = scopeInfoCollapsed ?
+                    '<i class="fas fa-caret-right"></i>' :
+                    '<i class="fas fa-caret-down"></i>';
+            } else if (emptyState.style.display !== 'none') {
+                // 當處於空狀態時，點擊無效果或顯示提示
+                showNotification('請先在地圖上繪製範圍以查看資訊', 'info');
+            }
+        });
+        
+        // 大廈資訊摺疊功能
+        const buildingsToggle = document.getElementById('buildings-toggle');
+        const buildingsInfo = document.getElementById('buildings-info');
+        const buildingsEmpty = document.getElementById('buildings-empty');
+        const collapseIconBuildings = document.getElementById('collapse-icon-buildings');
+        let buildingsCollapsed = false;
+        
+        buildingsToggle.addEventListener('click', () => {
+            // 只有當有大廈資訊時才可摺疊
+            if (buildingsInfo.style.display !== 'none') {
+                buildingsCollapsed = !buildingsCollapsed;
+                buildingsInfo.classList.toggle('collapsed', buildingsCollapsed);
+                collapseIconBuildings.classList.toggle('collapsed', buildingsCollapsed);
+                collapseIconBuildings.innerHTML = buildingsCollapsed ?
+                    '<i class="fas fa-caret-right"></i>' :
+                    '<i class="fas fa-caret-down"></i>';
+            } else if (buildingsEmpty.style.display !== 'none') {
+                // 當處於空狀態時，點擊無效果或顯示提示
+                showNotification('請先在地圖上繪製範圍以查看大廈列表', 'info');
+            }
+        });
+        
+        // 流動裝置控制面板功能
+        const mobileToggle = document.getElementById('mobile-toggle');
+        const controlPanel = document.getElementById('control-panel');
+        const panelOverlay = document.getElementById('panel-overlay');
+        const panelCloseBtn = document.getElementById('panel-close-btn');
+        let panelVisible = window.innerWidth > 768; // 桌面裝置預設顯示
+        
+        // 初始化面板狀態
+        if (window.innerWidth <= 768) {
+            controlPanel.classList.remove('mobile-visible');
+            panelVisible = false;
+            panelOverlay.classList.remove('visible');
+        }
+        
+        // 切換面板顯示/隱藏
+        function togglePanel() {
+            panelVisible = !panelVisible;
+            controlPanel.classList.toggle('mobile-visible', panelVisible);
+            panelOverlay.classList.toggle('visible', panelVisible);
+            
+            // 在流動裝置上，更新 mobile-toggle 文字
+            if (window.innerWidth <= 768) {
+                mobileToggle.innerHTML = '<i class="fas fa-bars"></i> 控制面板';
+                if(panelVisible) {
+                    mobileToggle.classList.add("element-hidden");
+                } else {
+                    mobileToggle.classList.remove("element-hidden");
+                }
+            }
+        }
+        
+        // mobile-toggle 點擊事件
+        mobileToggle.addEventListener('click', togglePanel);
+        
+        // 面板內的關閉按鈕點擊事件
+        panelCloseBtn.addEventListener('click', () => {
+            panelVisible = false;
+            controlPanel.classList.remove('mobile-visible');
+            panelOverlay.classList.remove('visible');
+            mobileToggle.classList.remove("element-hidden");
+        });
+        
+        // 計算面積（平方公里）
+        function calculateArea(bounds) {
+            const latDiff = Math.abs(bounds.getNorth() - bounds.getSouth());
+            const lngDiff = Math.abs(bounds.getEast() - bounds.getWest());
+            // 近似轉換（1度 ≈ 111.32 公里於赤道）
+            const latKm = latDiff * 111.32;
+            const lngKm = lngDiff * 111.32 * Math.cos((bounds.getNorth() + bounds.getSouth()) * Math.PI / 360);
+            const area = latKm * lngKm;
+            
+            let areaText;
+            if (area > 1000000) {
+                areaText = `${(area / 1000000).toFixed(1)}百萬平方公里`;
+            } else if (area > 1000) {
+                areaText = `${(area / 1000).toFixed(1)}千平方公里`;
+            } else if (area > 1) {
+                areaText = `${area.toFixed(2)} 平方公里`;
+            } else {
+                areaText = `${(area * 100).toFixed(2)} 公頃`;
+            }
+            
+            // 更新統計面板
+            selectedAreaElement.textContent = areaText.split(' ')[0];
+            
+            return areaText;
+        }
+        
+        // 更新範圍資訊顯示
+        function updateScopeInfo(bounds) {
+            const scopeInfo = document.getElementById('scope-info');
+            const emptyState = document.getElementById('empty-state');
+            const coordinates = document.getElementById('scope-coordinates');
+            const areaValue = document.getElementById('scope-area-value');
+            
+            const north = bounds.getNorth().toFixed(4);
+            const south = bounds.getSouth().toFixed(4);
+            const east = bounds.getEast().toFixed(4);
+            const west = bounds.getWest().toFixed(4);
+            
+            coordinates.innerHTML = `
+                北界: <strong>${north}°</strong><br>
+                南界: <strong>${south}°</strong><br>
+                東界: <strong>${east}°</strong><br>
+                西界: <strong>${west}°</strong>
+            `;
+            
+            areaValue.textContent = calculateArea(bounds);
+            scopeInfo.style.display = 'block';
+            scopeInfo.classList.remove('collapsed');
+            document.getElementById('collapse-icon-scope-info').classList.remove('collapsed');
+            document.getElementById('collapse-icon-scope-info').innerHTML = '<i class="fas fa-caret-down"></i>';
+            scopeInfoCollapsed = false;
+            emptyState.style.display = 'none';
+            
+            // 顯示清除按鈕
+            clearAllBtn.classList.add('visible');
+            
+            // 在流動裝置選擇範圍時自動顯示面板
+            if (window.innerWidth <= 768 && !panelVisible) {
+                togglePanel();
+            }
+        }
+        
+        // 為流動裝置優化
+        function optimizeForMobile() {
+            const isMobile = window.innerWidth <= 768;
+            if (isMobile) {
+                // 流動裝置優化
+                const instructionsP = document.querySelectorAll('.instructions p');
+                if (instructionsP.length >= 3) {
+                    instructionsP[0].innerHTML = '<strong>繪製範圍：</strong>點擊矩形工具（左下角），然後在地圖上拖動';
+                    instructionsP[1].innerHTML = '<strong>查看大廈：</strong>繪製範圍後自動顯示私人大廈';
+                    instructionsP[2].innerHTML = '<strong>清除範圍：</strong>點擊「清除範圍」按鈕（左下角）';
+                }
+                
+                // 確保面板在流動裝置上初始狀態正確
+                controlPanel.classList.remove('mobile-visible');
+                panelOverlay.classList.remove('visible');
+                panelVisible = false;
+            } else {
+                // 桌面指引
+                const instructionsP = document.querySelectorAll('.instructions p');
+                if (instructionsP.length >= 3) {
+                    instructionsP[0].innerHTML = '<strong>繪製範圍：</strong>點擊矩形工具（左下角），然後點擊並拖動';
+                    instructionsP[1].innerHTML = '<strong>查看大廈：</strong>繪製範圍後自動顯示範圍內的私人大廈';
+                    instructionsP[2].innerHTML = '<strong>清除範圍：</strong>點擊「清除範圍」按鈕（左下角）';
+                }
+                
+                // 確保面板在桌面上始終顯示
+                controlPanel.classList.add('mobile-visible');
+                panelVisible = true;
+            }
+            // 確保地圖正確渲染
+            setTimeout(() => map.invalidateSize(), 100);
+        }
+        
+        // 初始化
+        window.addEventListener('load', () => {
+            optimizeForMobile();
+            
+            // 載入私人大廈數據
+            loadPrivateBuildingsData();
+            
+            // 為首次使用者顯示歡迎訊息
+            if (!localStorage.getItem('buildingTutorialShown')) {
+                setTimeout(() => {
+                    showNotification("歡迎使用「香港私人大廈業主委員會」！繪製範圍以查看範圍內的私人大廈。", 'info');
+                    localStorage.setItem('buildingTutorialShown', 'true');
+                }, 1000);
+            }
+        });
+        
+        // 處理視窗大小調整
+        window.addEventListener('resize', () => {
+            optimizeForMobile();
+        });
+    </script>
+</body>
+</html>
